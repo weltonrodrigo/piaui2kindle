@@ -23,8 +23,9 @@ use warnings;
 use Scrappy;
 use Template;
 use IO::File;
-use WWW::Mechanize::Cached::GZip;
+use WWW::Mechanize::Cached;
 use URI;
+use Data::Dumper::Concise;
 
 binmode STDOUT, ":utf8";
 
@@ -33,18 +34,21 @@ my $tt = Template->new({INTERPOLATE => 1, ENCODING => 'utf8'})
 
 my $io = IO::File->new();
 my $scrappy = Scrappy->new;
-$scrappy->{worker} = new WWW::Mechanize::Cached::GZip;
+$scrappy->{worker} = new WWW::Mechanize::Cached;
+$scrappy->debug(1);
 
 my $base    = 'http://revistapiaui.estadao.com.br';
 my $sumario = URI->new_abs('/outras-edicoes/sumario/edicao-', $base);
 my $atual = 70;
  
 # Para guardar informações de todas as edições;
-my @edicoes;
-my $id = 0;
+my %edicoes;
+
+# Agenda o crawling de todos os sumarios.
+$scrappy->queue->add($sumario . $_) foreach (10..$atual-1);
  
-# Inicia o crawling pela primeira edição.
-$scrappy->crawl($sumario . 1,
+# Inicia pela primeira edição.
+$scrappy->crawl($scrappy->queue->next, 
 	'/outras-edicoes/sumario/edicao-:edicao' => {
 		'.conteudo li a' => sub {
 			my ($self, $item, $args) = @_;
@@ -55,14 +59,13 @@ $scrappy->crawl($sumario . 1,
 			# Visitará todos os artigos deste edição e o sumário da próxima,
 			# exceto pela edição atual, que é fechada para assinantes;
 			$self->queue->add($item->{href});
-			$self->queue->add($sumario . $args->{edicao} + 1)
-				unless $args->{edicao} < $atual-1;
 		}
 	},
-	'/:edicao/:secao/:artigo' => {
+	'/edicao-:edicao/:secao/:artigo' => {
 		'body' => sub {
 			my ($self, $item, $args) = @_;
-			
+
+			my $edicao = "edicao-" . $args->{edicao};
 			my $secao = $args->{secao};
 			my $autor = $self
 				->select('.autor p em')->data->[0]->{text};
@@ -83,8 +86,21 @@ $scrappy->crawl($sumario . 1,
 			my $content = join "\n",
 								map $_->{html},
 									@{$self->select('.article_content p')->data};
-			 
+
+			my $this = {
+				'edicao' => $edicao, 
+				'secao'  => $secao, 
+				'autor'  => $autor, 
+				'title'  => $title, 
+				'subtitle' => $subtitle, 
+				'date'   => $date, 
+				'article_img' => $article_img, 
+				'content' => $content
+			};
+			
+			push @{ $edicoes{'edicao'} }, $this;
 		}
 	}
 );
 
+print Dumper \%edicoes;
