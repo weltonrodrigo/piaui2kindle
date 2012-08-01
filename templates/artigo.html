@@ -1,0 +1,18 @@
+<html>
+	<head>
+		<style type="text/css">
+
+		body {
+			font-family: Segoe UI, sans-serif;
+			padding: 10px 20%;
+			}
+		</style>
+		<title>[% title %]</title>
+	</head>
+	<body>
+		<h1>[% title %]</h1>
+		[% FOREACH paragraph = content %]
+			<p>[% paragraph.html %]</p>
+		[% END %]
+	</body>
+</html>
