@@ -27,13 +27,11 @@ use WWW::Mechanize::Cached;
 
 binmode STDOUT, ":utf8";
 
-my $tt = Template->new({INTERPOLATE => 1, ENCODING => 'utf8'}) or die
-"$Template::ERROR\n";
+my $tt = Template->new({INTERPOLATE => 1, ENCODING => 'utf8'})
+		or die "$Template::ERROR\n";
 
 my $io = IO::File->new();
-
 my $scrappy = Scrappy->new;
-
 $scrappy->{worker} = new WWW::Mechanize::Cached;
  
 $scrappy->crawl('http://revistapiaui.estadao.com.br/outras-edicoes/sumario/edicao-64',
